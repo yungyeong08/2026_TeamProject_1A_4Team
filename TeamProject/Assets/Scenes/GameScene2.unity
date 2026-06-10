@@ -227,6 +227,9 @@ MonoBehaviour:
   CharacterName: {fileID: 723484341}
   writerText: 
   textSpeed: 0.05
+  imageKimYeoJu: {fileID: 0}
+  imageKangDoYoon: {fileID: 0}
+  imageUnknown: {fileID: 0}
 --- !u!4 &604012680
 Transform:
   m_ObjectHideFlags: 0

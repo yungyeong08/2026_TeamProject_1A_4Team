@@ -654,7 +654,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 26711e92786291548a6d3fec52ad5058, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Startclick
-  targetImageObject: {fileID: 0}
+  targetImageObject: {fileID: 425249383}
 --- !u!4 &692197477
 Transform:
   m_ObjectHideFlags: 0
