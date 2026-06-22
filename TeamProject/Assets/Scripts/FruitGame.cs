@@ -1,4 +1,5 @@
 ﻿using System.Collections; // 코루틴(IEnumerator) 사용을 위해 필수 추가
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -9,7 +10,12 @@ public class FruitGame : MonoBehaviour
     // 💡 유니티 인스펙터에서 1~5단계 프리팹 총 5개를 순서대로 넣어주세요. (0번=1단계, 4번=5단계)
     public GameObject[] fruitPerfabs;
     public float[] fruitSize = { 0.5f, 0.7f, 0.9f, 1.1f, 1.3f }; // 1~5단계 크기 설정 (총 5개)
-    public float fruitStartHigh = 6.0f;
+
+    // 💡 기존 6.0f에서 화면 안으로 보이도록 3.2f로 낮췄습니다! 
+    // 게임을 실행해보고 높이를 인스펙터 창에서 조금씩 더 조절하셔도 됩니다.
+    public float fruitStartHigh = 3.2f;
+
+    // 💡 [수정] 아래 중복 선언되어 에러를 일으키던 public GameObject[] fruitPrefabs; 문장을 제거했습니다.
 
     [Header("Game Control")]
     public float gameWidth = 6.0f;
@@ -168,29 +174,23 @@ public class FruitGame : MonoBehaviour
         }
     }
 
-    // 클리어 문구를 보여주고 대기하는 코루틴 함수
     IEnumerator ClearRoutine()
     {
         isClearing = true; // 대기 시간 동안 마우스 클릭 및 추가 조작 방지
         Debug.Log("클리어 연출 시작.");
 
-        // 마우스를 따라다니며 손에 쥐고 있던 과일이 있다면 깔끔하게 지워줍니다.
         if (currentFruit != null)
         {
             Destroy(currentFruit);
         }
 
-        // 1. 화면에 "STAGE CLEAR!" 문구 UI 활성화
         if (clearTextObject != null)
         {
             clearTextObject.SetActive(true);
         }
 
-        // 2. 설정한 시간(3초) 동안 코드 흐름을 멈추고 대기합니다.
-        // 바닥에 완성된 5단계 과일과 클리어 텍스트가 동시에 보이게 됩니다!
         yield return new WaitForSeconds(clearDelayTime);
 
-        // 3. 대기 시간이 끝난 후 다음 씬으로 전환합니다.
         LoadNextScene();
     }
 
