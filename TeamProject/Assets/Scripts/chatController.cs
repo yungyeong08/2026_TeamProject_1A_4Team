@@ -4,6 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.Audio; // 💡 오디오 믹서 동기화를 위해 필수 추가!
 
 public class chatController : MonoBehaviour
 {
@@ -27,18 +28,60 @@ public class chatController : MonoBehaviour
     public float blackScreenDelay = 1.0f; // 검은 화면이 유지될 시간 (1초)
 
     [Header("Scene Management")]
-    public string skipTargetScene = "MargeGame";       // 스킵 버튼 누르면 갈 머지게임 씬
+    public string skipTargetScene = "GameScene1";       // 💡 스킵 버튼을 누르면 갈 타겟 씬을 GameScene1으로 변경!
 
-    // 💡 인스펙터의 오류 잔상을 방지하기 위해 내부적으로만 사용하는 고정 타겟 씬 변수입니다.
+    [Header("Chat Audio Setting")]
+    public AudioClip nextChatSound;
+    private AudioSource chatAudioSource;
+
+    // 💡 메인화면에서 조절한 볼륨을 게임씬에서도 그대로 강제 로드하기 위한 오디오 믹서 변수
+    [Header("Global Audio Mixer")]
+    public AudioMixer globalAudioMixer;
+
+    // 💡 내부적으로만 사용하는 고정 타겟 씬 변수입니다.
     private string storyCompleteScene = "GameScene1";
 
     private bool isTransitioning = false; // 중복 전환 방지용 플래그
 
     void Start()
     {
-        // 인스펙터에 어떤 값이 남아있든 실행 시점에 "GameScene1"과 "MargeGame"으로 완벽히 강제 고정합니다.
+        // ================================================================
+        // 🔊 메인화면에서 슬라이더로 줄여놓은 믹서 볼륨 값을 게임씬 시작할 때 강제로 한 번 더 동기화합니다.
+        if (globalAudioMixer != null)
+        {
+            if (globalAudioMixer.GetFloat("BGMVolume", out float bgmVol))
+                globalAudioMixer.SetFloat("BGMVolume", bgmVol);
+
+            if (globalAudioMixer.GetFloat("SFXVolume", out float sfxVol))
+                globalAudioMixer.SetFloat("SFXVolume", sfxVol);
+        }
+        // ================================================================
+
+        // 🔊 효과음을 재생해 줄 스피커(AudioSource)를 자동으로 세팅합니다.
+        chatAudioSource = GetComponent<AudioSource>();
+        if (chatAudioSource == null)
+        {
+            chatAudioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // 💡 실시간 코드로 생성된 오디오 소스의 출구(Output)를 오디오 믹서의 "SFX" 그룹으로 강제 고정합니다.
+        if (globalAudioMixer != null)
+        {
+            AudioMixerGroup[] groups = globalAudioMixer.FindMatchingGroups("SFX");
+            if (groups.Length > 0)
+            {
+                chatAudioSource.outputAudioMixerGroup = groups[0];
+            }
+        }
+
+        // 오디오가 잘리거나 입체음향 때문에 안 들리는 것을 막기 위해 2D 풀 볼륨으로 세팅합니다.
+        chatAudioSource.playOnAwake = false;
+        chatAudioSource.spatialBlend = 0f; // 2D 사운드 고정
+        chatAudioSource.volume = 1f;       // 볼륨 최대
+
+        // 💡 인스펙터에 어떤 값이 남아있든 실행 시점에 두 경로 모두 "GameScene1"으로 완벽히 강제 고정합니다.
         storyCompleteScene = "GameScene1";
-        skipTargetScene = "MargeGame";
+        skipTargetScene = "GameScene1";
 
         // 게임 시작 시 페이드 이미지(Image (2))를 자동으로 초기화하고 꺼둡니다.
         if (fadeImage != null)
@@ -73,6 +116,11 @@ public class chatController : MonoBehaviour
         {
             if (Input.GetMouseButtonDown(0))
             {
+                // 🔊 마우스 클릭이 감지되어 다음 대사로 넘어가기 직전에 효과음을 1회 재생합니다.
+                if (nextChatSound != null && chatAudioSource != null)
+                {
+                    chatAudioSource.PlayOneShot(nextChatSound);
+                }
                 break;
             }
             yield return null;
@@ -143,7 +191,7 @@ public class chatController : MonoBehaviour
         yield return StartCoroutine(NormalChat("", "운동부 차림."));
         yield return StartCoroutine(NormalChat("", "그리고 이상할 정도로 반짝이는 눈빛."));
         yield return StartCoroutine(NormalChat("???", "...누나."));
-        yield return StartCoroutine(NormalChat("김여주", "응?"));
+        yield return StartCoroutine(NormalChat("응?", "응?"));
         yield return StartCoroutine(NormalChat("???", "저 누나 알아요."));
         yield return StartCoroutine(NormalChat("김여주", "처음 보는데?"));
         yield return StartCoroutine(NormalChat("???", "...이제 알면 되죠!"));
@@ -161,7 +209,7 @@ public class chatController : MonoBehaviour
         yield return StartCoroutine(NormalChat("???", "후배님."));
         yield return StartCoroutine(NormalChat("김여주", "네?"));
         yield return StartCoroutine(NormalChat("???", "우리 앞으로 자주 보게 될 것 같은데."));
-        yield return StartCoroutine(NormalChat("", "여주는 그 의미를 알 수 없었다."));
+        yield return StartCoroutine(NormalChat("", "여주는 그 의미을 알 수 없었다."));
         yield return StartCoroutine(NormalChat("", "하지만 선배는 이미 알고 있는 것처럼 웃고 있었다."));
         yield return StartCoroutine(NormalChat("", "그날 하교길."));
         yield return StartCoroutine(NormalChat("", "여주는 문득 생각했다."));
@@ -175,15 +223,17 @@ public class chatController : MonoBehaviour
         yield return StartCoroutine(NormalChat("", "앞으로 자신의 학교생활을 크게 바꿔놓을 거라는 사실은."));
         yield return StartCoroutine(NormalChat("", "여주는 아직 아무것도 모르고 있었다."));
 
-        // 💡 모든 대사가 끝나면 인스펙터 세팅에 구애받지 않고 무조건 GameScene1으로 이동합니다.
+        // 모든 대사가 끝나면 무조건 GameScene1으로 이동합니다.
         StartCoroutine(FadeOutAndLoadScene(storyCompleteScene));
     }
 
+    // 💡 스킵 버튼 클릭 시 작동하는 부분
     public void SkipStory()
     {
         if (isTransitioning) return;
 
         StopAllCoroutines();
+        // 💡 skipTargetScene 변수가 GameScene1으로 고정되었으므로 페이드 아웃 후 GameScene1으로 이동합니다.
         StartCoroutine(FadeOutAndLoadScene(skipTargetScene));
     }
 

@@ -15,8 +15,6 @@ public class FruitGame : MonoBehaviour
     // 게임을 실행해보고 높이를 인스펙터 창에서 조금씩 더 조절하셔도 됩니다.
     public float fruitStartHigh = 3.2f;
 
-    // 💡 [수정] 아래 중복 선언되어 에러를 일으키던 public GameObject[] fruitPrefabs; 문장을 제거했습니다.
-
     [Header("Game Control")]
     public float gameWidth = 6.0f;
     public bool isGameOver = false;
@@ -35,12 +33,26 @@ public class FruitGame : MonoBehaviour
     [Header("Clear UI Settings")]
     public GameObject clearTextObject; // 💡 클리어 문구 UI 오브젝트 (인스펙터에서 Canvas 내부의 Text 연결)
     public float clearDelayTime = 3.0f; // 클리어 문구를 보여줄 시간 (3초)
+    public string mainSceneName = "Main"; // 💡 클리어 후 이동할 메인 화면 씬 이름
+
+    [Header("Audio Settings")]
+    public AudioClip mergeSound; // 🔊 과일이 합쳐질 때 재생할 효과음 (인스펙터에서 할당)
+    private AudioSource audioSource;
 
     private bool isClearing = false; // 클리어 연출 중 조작을 막기 위한 플래그
 
     void Start()
     {
         if (mainCamera == null) mainCamera = Camera.main;
+
+        // 🔊 오디오 소스 컴포넌트 자동 세팅
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D 사운드로 설정
 
         // 시작할 때는 클리어 문구를 화면에서 숨깁니다.
         if (clearTextObject != null) clearTextObject.SetActive(false);
@@ -109,6 +121,7 @@ public class FruitGame : MonoBehaviour
             currentFruit.transform.localScale = new Vector3(fruitSize[currentFruitType], fruitSize[currentFruitType], 1);
         }
 
+        // 2026 유니티 가이드 기준 최신 속성 반영 (linearVelocity)
         Rigidbody2D rb = currentFruit.GetComponent<Rigidbody2D>();
         if (rb != null)
         {
@@ -139,6 +152,12 @@ public class FruitGame : MonoBehaviour
     {
         if (isGameOver || isClearing) return;
 
+        // 🔊 과일이 합쳐질 때 이펙트 사운드 한 번 재생
+        if (mergeSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(mergeSound);
+        }
+
         // 다음 단계 계산 (인덱스 기준)
         int nextLevel = fruitType + 1;
 
@@ -165,7 +184,7 @@ public class FruitGame : MonoBehaviour
             AddScore((nextLevel + 1) * 10);
             Debug.Log((nextLevel + 1) + "단계 과일 생성 완료!");
 
-            // 💡 [정밀 검사 완료] 새로 생성된 과일이 인덱스 4(즉, 최종 5단계)일 때만 클리어 루틴 발동!
+            // 💡 새로 생성된 과일이 인덱스 4(즉, 최종 5단계)일 때만 클리어 루틴 발동!
             if (nextLevel == 4)
             {
                 Debug.Log("★ 축하합니다! 최종 5단계 과일 탄생 ★");
@@ -191,7 +210,7 @@ public class FruitGame : MonoBehaviour
 
         yield return new WaitForSeconds(clearDelayTime);
 
-        LoadNextScene();
+        LoadMainScene();
     }
 
     public void AddScore(int amount)
@@ -206,16 +225,9 @@ public class FruitGame : MonoBehaviour
             scoreText.text = "Score: " + score;
     }
 
-    void LoadNextScene()
+    // 💡 [수정] 클리어 시 메인화면("Main")으로 가도록 변경된 씬 로드 함수
+    void LoadMainScene()
     {
-        int currentSceneIndex = SceneManager.GetActiveScene().buildIndex;
-        if (currentSceneIndex + 1 < SceneManager.sceneCountInBuildSettings)
-        {
-            SceneManager.LoadScene(currentSceneIndex + 1);
-        }
-        else
-        {
-            Debug.LogWarning("다음 씬이 빌드 설정(Build Settings)에 등록되어 있지 않습니다!");
-        }
+        SceneManager.LoadScene(mainSceneName);
     }
 }

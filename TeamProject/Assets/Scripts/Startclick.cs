@@ -1,55 +1,70 @@
 ﻿using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.EventSystems; // UI 충돌 검사를 위해 반드시 필요합니다!
-using UnityEngine.UI; // 💡 이미지 컴포넌트 접근을 위해 추가
+using UnityEngine.EventSystems;
+using System.Collections; // Coroutine을 쓰기 위해 추가!
 
 public class Startclick : MonoBehaviour
 {
-    [Header("Click Target")]
-    // 💡 유니티 인스펙터에서 클릭했을 때 넘어 가게 할 이미지(오브젝트)를 여기에 드래그 앤 드롭 하세요.
-    public GameObject targetImageObject;
+    [Header("Audio Setting")]
+    public AudioClip clickSound;
+
+    private AudioSource audioSource;
+    private bool isTransitioning = false; // 💡 중복 클릭 방지용 방패막이
+
+    void Start()
+    {
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null)
+        {
+            audioSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        // 🔊 효과음이 끊기거나 작게 들리지 않도록 3D 설정을 끄고 2D 풀 볼륨으로 세팅합니다.
+        audioSource.playOnAwake = false;
+        audioSource.spatialBlend = 0f; // 2D 사운드 고정
+        audioSource.volume = 1f;       // 볼륨 최대
+    }
 
     void Update()
     {
-        // 1. 마우스 왼쪽 버튼 클릭이 감지되었을 때
+        // 씬 전환 중일 때는 클릭 입력을 완전히 무시합니다.
+        if (isTransitioning) return;
+
         if (Input.GetMouseButtonDown(0))
         {
-            // 2. 현재 마우스 위치에 UI(버튼 등)가 있는지 확인
-            // EventSystem.current.IsPointerOverGameObject()가 true이면 UI를 누른 상태입니다.
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject())
             {
-                // 💡 [추가된 로직] 클릭한 UI가 우리가 지정한 '그 이미지'가 맞는지 확인합니다.
-                // 마우스 위치에서 UI 레이캐스트를 받아와 타겟 오브젝트와 일치하는지 체크합니다.
-                PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
-                pointerEventData.position = Input.mousePosition;
-
-                System.Collections.Generic.List<RaycastResult> results = new System.Collections.Generic.List<RaycastResult>();
-                EventSystem.current.RaycastAll(pointerEventData, results);
-
-                bool isTargetClicked = false;
-                foreach (RaycastResult result in results)
+                if (EventSystem.current.currentSelectedGameObject != null &&
+                    EventSystem.current.currentSelectedGameObject.name != "Image")
                 {
-                    // 클릭된 UI 중 우리가 등록한 targetImageObject가 있다면 타겟 클릭으로 인정
-                    if (result.gameObject == targetImageObject)
-                    {
-                        isTargetClicked = true;
-                        break;
-                    }
-                }
-
-                // 지정한 이미지를 클릭한 것이 맞다면 씬 전환을 실행합니다!
-                if (isTargetClicked)
-                {
-                    SceneManager.LoadScene("GameScene");
                     return;
                 }
-
-                // 만약 다른 UI 버튼을 누른 상태라면, 기존 코드대로 함수를 빠져나갑니다.
-                return;
             }
 
-            // 3. UI 버튼이 아닌 빈 화면을 눌렀을 때는 아무것도 하지 않고 무시합니다.
-            // (기존에는 여기서 씬이 넘어갔으나, 이제 이미지를 누를 때만 넘어가도록 흐름이 고정됩니다.)
+            // 💡 바로 씬을 바꾸지 않고, 효과음을 끝까지 재생하는 코루틴을 실행합니다!
+            StartCoroutine(PlaySoundAndLoadScene());
         }
+    }
+
+    // 🔥 효과음이 다 끝난 후에 안전하게 씬을 넘겨주는 마법의 함수입니다.
+    IEnumerator PlaySoundAndLoadScene()
+    {
+        isTransitioning = true; // 대기 시작했으니 클릭 잠금!
+
+        if (clickSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(clickSound);
+
+            // 💡 효과음 길이(초)만큼 씬 이동을 잠시 지연시킵니다 (보통 0.2초~0.5초 사이)
+            yield return new WaitForSeconds(clickSound.length);
+        }
+        else
+        {
+            // 혹시 오디오 파일 연결을 까먹었을 때를 대비해 기본 대기 시간을 줍니다.
+            yield return new WaitForSeconds(0.1f);
+        }
+
+        // 소리가 다 난 다음 다음 씬으로 안전하게 이동!
+        SceneManager.LoadScene("GameScene");
     }
 }

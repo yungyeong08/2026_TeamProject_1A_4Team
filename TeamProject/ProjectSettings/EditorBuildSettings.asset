@@ -13,7 +13,7 @@ EditorBuildSettings:
     guid: 3ea285ade4160cd4190533bff0770b04
   - enabled: 1
     path: Assets/Scenes/GameScene1.unity
-    guid: 11c9279786b46a94bb85701437cb8efb
+    guid: e625313e66625ba4195a4e37bb0ee6b3
   - enabled: 1
     path: Assets/Scenes/MargeGame.unity
     guid: d9c8c6dc8025aa44693775cb9bdfc976
